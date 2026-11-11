@@ -11,6 +11,7 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../shared/widgets/error_state.dart';
+import '../../shared/widgets/loading_indicator.dart';
 import 'result_provider.dart';
 
 class ResultScreen extends ConsumerStatefulWidget {
@@ -130,6 +131,6 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       );
     }
 
-    return const Center(child: CircularProgressIndicator());
+    return const LoadingIndicator(message: 'Preparing download…');
   }
 }

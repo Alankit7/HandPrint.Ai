@@ -8,7 +8,6 @@ GET   /download/{id} — stream finished PDF
 from __future__ import annotations
 
 import logging
-import shutil
 import uuid
 from pathlib import Path
 
@@ -17,8 +16,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import ConflictError, FileTooLargeError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.core.security import require_api_key
+from app.core.uploads import save_upload, validate_pdf
 from app.db.models import Job, JobStatus, Profile, ProfileStatus
 from app.db.schemas import JobResponse, MessageResponse
 from app.db.session import get_db
@@ -46,18 +46,8 @@ async def create_convert_job(
     pdf: UploadFile = File(..., description="Printed PDF to convert"),
     db: Session = Depends(get_db),
 ) -> JobResponse:
-    # ── Validate PDF type ─────────────────────────────────────────────────────
-    if pdf.content_type not in ("application/pdf", "application/octet-stream"):
-        raise ValidationError(
-            f"Only PDF files are accepted (got '{pdf.content_type}')."
-        )
-
-    # ── Validate PDF size ─────────────────────────────────────────────────────
-    pdf.file.seek(0, 2)
-    size = pdf.file.tell()
-    pdf.file.seek(0)
-    if size > settings.max_pdf_bytes:
-        raise FileTooLargeError(settings.max_pdf_mb)
+    # ── Validate PDF type + size ──────────────────────────────────────────────
+    validate_pdf(pdf, settings.max_pdf_bytes, settings.max_pdf_mb)
 
     # ── Validate profile ──────────────────────────────────────────────────────
     profile: Profile | None = db.get(Profile, profile_id)
@@ -71,11 +61,7 @@ async def create_convert_job(
 
     # ── Save PDF ──────────────────────────────────────────────────────────────
     job_id = str(uuid.uuid4())
-    job_upload_dir = settings.upload_dir / job_id
-    job_upload_dir.mkdir(parents=True, exist_ok=True)
-    pdf_dest = job_upload_dir / (pdf.filename or "input.pdf")
-    with pdf_dest.open("wb") as f:
-        shutil.copyfileobj(pdf.file, f)
+    pdf_dest = save_upload(pdf, settings.upload_dir / job_id / (pdf.filename or "input.pdf"))
 
     # ── Create job record ─────────────────────────────────────────────────────
     job = Job(

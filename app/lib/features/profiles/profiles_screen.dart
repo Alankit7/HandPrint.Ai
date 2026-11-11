@@ -10,6 +10,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import '../../core/models/profile.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/error_state.dart';
+import '../../shared/widgets/inline_error_card.dart';
 import '../../shared/widgets/loading_indicator.dart';
 import 'profiles_provider.dart';
 
@@ -132,17 +133,7 @@ class _ProfileCard extends StatelessWidget {
             ],
             if (profile.status == ProfileStatus.failed && profile.error != null) ...[
               const Gap(8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  profile.error!,
-                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onErrorContainer),
-                ),
-              ),
+              InlineErrorCard(message: profile.error!),
             ],
             if (profile.status == ProfileStatus.pending || profile.status == ProfileStatus.failed) ...[
               const Gap(12),

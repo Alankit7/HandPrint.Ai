@@ -10,6 +10,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 
 import '../../core/models/profile.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/inline_error_card.dart';
 import '../profiles/profiles_provider.dart';
 import 'convert_provider.dart';
 
@@ -143,16 +144,11 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
 
           // ── Error ──────────────────────────────────────────────────────────
           if (convertState.error != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                convertState.error!,
-                style: TextStyle(color: theme.colorScheme.onErrorContainer),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: InlineErrorCard(
+                message: convertState.error!,
+                onDismiss: () => ref.read(convertProvider.notifier).reset(),
               ),
             ),
 

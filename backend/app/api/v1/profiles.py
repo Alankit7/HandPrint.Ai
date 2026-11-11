@@ -8,7 +8,6 @@ GET   /profiles/{id}            — status + progress
 from __future__ import annotations
 
 import logging
-import shutil
 import uuid
 from pathlib import Path
 
@@ -16,8 +15,9 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import ConflictError, FileTooLargeError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.security import require_api_key
+from app.core.uploads import save_upload, validate_image
 from app.db.models import Profile, ProfileStatus
 from app.db.schemas import MessageResponse, ProfileCreate, ProfileResponse
 from app.db.session import get_db
@@ -57,19 +57,8 @@ async def create_profile(
         )
 
     # ── Validate each image ───────────────────────────────────────────────────
-    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/tiff"}
     for img in images:
-        if img.content_type not in allowed_types:
-            raise ValidationError(
-                f"Unsupported image type '{img.content_type}' for '{img.filename}'. "
-                f"Allowed: JPEG, PNG, WEBP, TIFF."
-            )
-        # Size check — read in chunks to avoid buffering whole file in memory
-        img.file.seek(0, 2)
-        size = img.file.tell()
-        img.file.seek(0)
-        if size > settings.max_sample_image_bytes:
-            raise FileTooLargeError(settings.max_sample_image_mb)
+        validate_image(img, settings.max_sample_image_bytes, settings.max_sample_image_mb)
 
     # ── Persist images ────────────────────────────────────────────────────────
     profile_id = str(uuid.uuid4())
@@ -79,8 +68,7 @@ async def create_profile(
     for idx, img in enumerate(images):
         suffix = Path(img.filename or f"sample_{idx}.jpg").suffix or ".jpg"
         dest = sample_dir / f"{idx:03d}{suffix}"
-        with dest.open("wb") as f:
-            shutil.copyfileobj(img.file, f)
+        save_upload(img, dest)
 
     # ── Create DB record ──────────────────────────────────────────────────────
     profile = Profile(

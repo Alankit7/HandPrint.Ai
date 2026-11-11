@@ -555,22 +555,20 @@ class ModelWordRenderer:
         if ckpt_file is None or not ckpt_file.exists():
             raise FileNotFoundError(f"No checkpoint found at '{self.checkpoint_path}'.")
 
-        # Try to import torch and the model
+        # Attempt to load torch — will raise ImportError if not installed.
+        # The model architecture import will live here once training is real.
         try:
             import torch  # noqa: F401
-            from app.services.hw_models.factory import get_model  # noqa: F401
-            # If we get here, torch and the model code are available.
-            # The actual model loading depends on the specific architecture.
-            # For now, we delegate to the factory, but since train_profile()
-            # is still a stub, the checkpoint won't have valid weights.
-            # This will raise a RuntimeError or similar when trying to load.
+            # Placeholder: raise NotImplementedError until real model code replaces
+            # the training stub and a matching load/forward is implemented here.
             raise NotImplementedError(
                 "Model-based word rendering requires a trained checkpoint. "
-                "The training stub has not been replaced yet."
+                "Replace this block with real model loading once train_profile() "
+                "is implemented."
             )
         except ImportError as exc:
             raise ImportError(
-                f"Cannot load model: missing dependency ({exc})."
+                f"Cannot load model: torch is not installed ({exc})."
             ) from exc
 
     def render_word(self, word: str, target_xheight_px: int) -> np.ndarray:
