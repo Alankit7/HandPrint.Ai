@@ -1,0 +1,37 @@
+# ── base.txt — runtime-only dependencies (no test tools) ─────────────────────
+# Used in production Docker builds:
+#   pip install -r requirements/base.txt
+#
+# The GPU packages (torch, torchvision, etc.) are pre-installed in the
+# pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime base image and are intentionally
+# excluded here to avoid a redundant ~3 GB re-download.
+
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+aiofiles==23.2.1
+
+# Config
+pydantic==2.7.1
+pydantic-settings==2.2.1
+python-dotenv==1.0.1
+
+# Database
+sqlalchemy==2.0.30
+alembic==1.13.1
+
+# PDF & image I/O
+Pillow==10.3.0
+pymupdf==1.24.1
+img2pdf==0.5.1
+reportlab==4.1.0
+
+# Preprocessing pipeline
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+scipy==1.13.0
+rapidfuzz==3.9.3
+
+# Scheduling
+apscheduler==3.10.4

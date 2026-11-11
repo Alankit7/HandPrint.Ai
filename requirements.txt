@@ -1,0 +1,195 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Handprint AI — Python dependency manifest (backend)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# This file is the single reference for all Python packages in the project.
+# The canonical install file for the backend is at backend/requirements.txt;
+# this root-level copy is kept in sync for tooling that expects a root manifest.
+#
+# Flutter / Dart dependencies are managed by pub (see app/pubspec.yaml).
+# A human-readable reference is at the bottom of this file.
+#
+# Usage
+# ─────
+#   # Backend (all environments)
+#   cd backend
+#   pip install -r requirements.txt
+#
+#   # Backend (production only — skip test deps)
+#   pip install -r requirements.txt --no-deps
+#   pip install $(grep -v '^#\|^$\|pytest\|httpx\|pytest-' requirements.txt)
+#
+#   # Or use the convenience targets below:
+#   pip install -r requirements/base.txt        # runtime only
+#   pip install -r requirements/dev.txt         # runtime + testing
+#   pip install -r requirements/gpu.txt         # runtime + torch/cuda
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ── 1. Web framework ──────────────────────────────────────────────────────────
+# FastAPI provides the async HTTP layer; uvicorn is the ASGI server.
+# python-multipart is required for file upload (Form + UploadFile).
+# aiofiles is used by uvicorn for static file serving.
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+aiofiles==23.2.1
+
+
+# ── 2. Configuration & validation ─────────────────────────────────────────────
+# pydantic v2 for request/response schemas and data validation.
+# pydantic-settings reads .env files into the Settings singleton.
+# python-dotenv provides the underlying .env parser.
+pydantic==2.7.1
+pydantic-settings==2.2.1
+python-dotenv==1.0.1
+
+
+# ── 3. Database ───────────────────────────────────────────────────────────────
+# SQLAlchemy 2.0 ORM with the new mapped_column / Mapped[] typed API.
+# Alembic handles schema migrations (run: alembic upgrade head).
+# SQLite is used by default; swap DATABASE_URL in .env for PostgreSQL.
+sqlalchemy==2.0.30
+alembic==1.13.1
+
+
+# ── 4. PDF & image I/O ────────────────────────────────────────────────────────
+# Pillow: PIL-compatible image library used throughout the ML pipeline.
+# PyMuPDF (imported as fitz): rasterises PDF pages to numpy arrays at 300 DPI.
+#   Also extracts text blocks, bounding boxes, and embedded images.
+# img2pdf: lossless conversion of rendered page images back into a PDF.
+#   Preserves DPI metadata; avoids JPEG re-compression artefacts.
+# reportlab: assembles debug preview grid PDFs in the preprocessing pipeline.
+Pillow==10.3.0
+pymupdf==1.24.1
+img2pdf==0.5.1
+reportlab==4.1.0
+
+
+# ── 5. Preprocessing pipeline (app/ml/preprocess.py) ─────────────────────────
+# numpy: array operations throughout the entire ML pipeline.
+# opencv-python-headless: line and word segmentation via morphological ops +
+#   connected-component analysis. Headless = no GUI / Qt dependency.
+# scipy: deskew correction via horizontal-projection variance maximisation
+#   (scipy.ndimage.rotate used at ¼ resolution for speed).
+# rapidfuzz: fast fuzzy string alignment (Levenshtein) for matching segmented
+#   word crops against a known source transcript (labels.csv alignment).
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+scipy==1.13.0
+rapidfuzz==3.9.3
+
+
+# ── 6. Scheduling ─────────────────────────────────────────────────────────────
+# APScheduler drives the periodic cleanup task (removes stale uploads/outputs).
+# BackgroundScheduler is started in app/main.py lifespan and runs in a thread.
+apscheduler==3.10.4
+
+
+# ── 7. Testing (dev / CI only — not installed in production Docker image) ──────
+# pytest: test runner (pytest.ini configures testpaths = tests).
+# pytest-asyncio: async test support (asyncio_mode = auto in pytest.ini).
+# httpx: HTTPX-based test client used by FastAPI's TestClient.
+# pytest-mock: provides the mocker fixture for patching in tests.
+pytest==8.2.0
+pytest-asyncio==0.23.6
+httpx==0.27.0
+pytest-mock==3.14.0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPTIONAL: GPU / ML runtime (NOT in requirements.txt by default)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# These packages are pre-installed in the production Dockerfile.prod base image
+# (pytorch/pytorch:2.3.0-cuda12.1-cudnn8-runtime) and do NOT need to be listed
+# here. Add them to a separate requirements/gpu.txt if you want explicit
+# version-pinning for local GPU development:
+#
+#   torch==2.3.0
+#   torchvision==0.18.0
+#   torchaudio==2.3.0        # only if audio features are needed
+#   einops==0.7.0            # tensor manipulation used by One-DM / DiffusionPen
+#   timm==1.0.3              # pre-trained vision model backbones
+#   diffusers==0.27.2        # HuggingFace diffusion model library
+#   transformers==4.40.1     # HuggingFace transformer models
+#   accelerate==0.30.0       # distributed training / mixed precision
+#
+# Install on a GPU machine:
+#   pip install torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cu121
+#   pip install einops==0.7.0 timm==1.0.3 diffusers==0.27.2 transformers==4.40.1 accelerate==0.30.0
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPTIONAL: Kraken line segmenter (soft dependency)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Kraken is a deep-learning OCR and layout analysis toolkit. The preprocessing
+# pipeline tries OpenCV segmentation first; if it finds fewer than
+# MIN_SEGMENTS_FOR_TRUST lines it falls back to Kraken's blla segmenter.
+# If Kraken is not installed the fallback is silently skipped (no error).
+#
+# Install manually when you want the Kraken fallback:
+#   pip install kraken==4.3.13
+#
+# Note: Kraken pulls in ~500 MB of transitive dependencies (torch, etc.).
+# Only install it if the OpenCV segmenter is producing poor results on your
+# specific handwriting samples.
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Flutter / Dart dependencies  (managed by pub, NOT pip)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# These are listed here for reference only. Install them with:
+#   cd app && flutter pub get
+#
+# Runtime packages (app/pubspec.yaml → dependencies):
+# ┌─────────────────────────────────┬────────────┬───────────────────────────────────────────────┐
+# │ Package                         │ Version    │ Purpose                                       │
+# ├─────────────────────────────────┼────────────┼───────────────────────────────────────────────┤
+# │ flutter_riverpod                │ ^2.5.1     │ State management (providers + notifiers)       │
+# │ dio                             │ ^5.4.3+1   │ HTTP client — typed API calls, multipart       │
+# │ go_router                       │ ^14.1.4    │ Declarative navigation with deep linking       │
+# │ file_picker                     │ ^8.0.3     │ Cross-platform file/image picker               │
+# │ syncfusion_flutter_pdfviewer    │ ^25.1.41   │ In-app PDF preview on result screen            │
+# │ path_provider                   │ ^2.1.3     │ App documents directory for saving PDFs        │
+# │ shared_preferences              │ ^2.2.3     │ Persist API key + base URL in settings         │
+# │ share_plus                      │ ^9.0.0     │ OS share sheet for exporting the result PDF    │
+# │ percent_indicator               │ ^4.2.3     │ Circular + linear progress rings               │
+# │ gap                             │ ^3.0.1     │ SizedBox convenience widget                    │
+# │ flutter_dotenv                  │ ^5.1.0     │ Load app/.env at startup                       │
+# └─────────────────────────────────┴────────────┴───────────────────────────────────────────────┘
+#
+# Dev-only packages (app/pubspec.yaml → dev_dependencies):
+# ┌─────────────────────────────────┬────────────┬───────────────────────────────────────────────┐
+# │ flutter_test (SDK)              │ bundled    │ Flutter testing framework                      │
+# │ flutter_lints                   │ ^4.0.0     │ Dart/Flutter lint rules                        │
+# │ mocktail                        │ ^1.0.4     │ Null-safe mock library for widget tests        │
+# └─────────────────────────────────┴────────────┴───────────────────────────────────────────────┘
+#
+# Android / iOS permissions (configured — no extra packages needed):
+#   Android: INTERNET, READ_EXTERNAL_STORAGE, READ_MEDIA_IMAGES
+#            (android/app/src/main/AndroidManifest.xml)
+#   iOS:     NSPhotoLibraryUsageDescription, NSDocumentsFolderUsageDescription
+#            UIFileSharingEnabled, PDF document type
+#            (ios/Runner/Info.plist)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# System-level dependencies  (installed via apt-get in the Dockerfile)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# These are OS packages, not Python packages. They are listed here so you know
+# what to install if running outside Docker on a bare Ubuntu / Debian machine.
+#
+#   libglib2.0-0      — required by OpenCV (glib threading internals)
+#   libgl1            — required by OpenCV (libGL.so.1)
+#   libsm6            — required by OpenCV (X Session Management)
+#   libxrender1       — required by OpenCV / Pillow (X rendering)
+#   libxext6          — required by OpenCV (X extensions)
+#   curl              — used by the Docker HEALTHCHECK script
+#   build-essential   — C compiler for scipy / numpy wheel builds (builder stage only)
+#
+# Install on Ubuntu / Debian:
+#   sudo apt-get install -y libglib2.0-0 libgl1 libsm6 libxrender1 libxext6 curl

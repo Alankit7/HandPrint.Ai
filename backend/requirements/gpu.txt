@@ -1,0 +1,24 @@
+# ── gpu.txt — ML / GPU packages for local GPU development ────────────────────
+# These are ALREADY pre-installed in the Dockerfile.prod base image.
+# Install this file only on a local machine with a CUDA-capable GPU
+# where you want to test model training/inference outside Docker.
+#
+#   pip install -r requirements/gpu.txt \
+#     --index-url https://download.pytorch.org/whl/cu121
+
+# Include base runtime
+-r base.txt
+
+# PyTorch stack (CUDA 12.1 wheels)
+torch==2.3.0
+torchvision==0.18.0
+
+# Model utilities
+einops==0.7.0
+timm==1.0.3
+diffusers==0.27.2
+transformers==4.40.1
+accelerate==0.30.0
+
+# Optional: Kraken layout segmenter (heavy — only install if needed)
+# kraken==4.3.13
