@@ -1,6 +1,5 @@
-/// Central configuration sourced from .env at startup.
-///
-/// All tunables are here — no magic strings scattered through the codebase.
+/// Default configuration loaded from .env at startup.
+/// Overridden at runtime by user-configurable Settings (SharedPreferences).
 library;
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,21 +7,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AppConfig {
   AppConfig._();
 
-  /// Call once inside `main()` before `runApp`.
+  /// Call once inside main() before runApp.
   static Future<void> load() => dotenv.load(fileName: '.env');
 
-  static String get apiBaseUrl =>
+  static String get defaultApiBaseUrl =>
       dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000';
 
-  static String get apiVersion => dotenv.env['API_VERSION'] ?? 'v1';
+  static String get defaultApiKey =>
+      dotenv.env['API_KEY'] ?? 'changeme-generate-a-real-key';
 
-  static Duration get pollInterval => Duration(
-        milliseconds:
-            int.tryParse(dotenv.env['POLL_INTERVAL_MS'] ?? '2000') ?? 2000,
-      );
-
-  static int get maxPdfSizeMb =>
-      int.tryParse(dotenv.env['MAX_PDF_SIZE_MB'] ?? '50') ?? 50;
-
-  static int get maxPdfSizeBytes => maxPdfSizeMb * 1024 * 1024;
+  static int get pollIntervalSeconds =>
+      int.tryParse(dotenv.env['POLL_INTERVAL_SECONDS'] ?? '2') ?? 2;
 }

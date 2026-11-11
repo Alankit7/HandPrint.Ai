@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────────────────────────
     cors_origins: str = "*"
 
+    # ── Logging ────────────────────────────────────────────────────────────────
+    log_format: Literal["text", "json"] = "text"
+    log_level: str = "INFO"
+
     # ── Validators ────────────────────────────────────────────────────────────
     @field_validator("upload_dir", "sample_dir", "output_dir", mode="before")
     @classmethod

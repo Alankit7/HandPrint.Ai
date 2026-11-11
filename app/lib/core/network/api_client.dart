@@ -1,117 +1,201 @@
-/// Dio HTTP client with interceptors for logging and error normalisation.
+/// Typed Dio HTTP client matching every backend endpoint.
+///
+/// Endpoints (all except /health require X-API-Key header):
+///   POST   /profiles               — create profile (multipart: name + images)
+///   POST   /profiles/{id}/train     — start fine-tuning
+///   GET    /profiles/{id}           — profile status + train progress
+///   POST   /convert                 — submit conversion (multipart: profile_id + pdf)
+///   GET    /jobs/{id}               — job status + render progress
+///   GET    /download/{id}           — download finished PDF (binary)
+///   GET    /health                  — liveness check (no auth)
 library;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config/app_config.dart';
+import '../models/job.dart';
+import '../models/profile.dart';
 import 'api_exception.dart';
 
 /// Provider so the client is a singleton shared across the app.
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+/// Re-created when settings (base URL / API key) change.
+final apiClientProvider = Provider<ApiClient>((ref) {
+  // The SettingsProvider overrides this with the user's configured values.
+  // This default constructor reads from .env defaults.
+  throw UnimplementedError('apiClientProvider must be overridden in ProviderScope');
+});
+
+/// A factory provider that accepts base URL and API key.
+final apiClientFactoryProvider =
+    Provider.family<ApiClient, ({String baseUrl, String apiKey})>(
+  (ref, args) => ApiClient(baseUrl: args.baseUrl, apiKey: args.apiKey),
+);
 
 class ApiClient {
-  ApiClient()
+  ApiClient({required this.baseUrl, required this.apiKey})
       : _dio = Dio(
           BaseOptions(
-            baseUrl: '${AppConfig.apiBaseUrl}/${AppConfig.apiVersion}',
+            baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 30),
-            receiveTimeout: const Duration(minutes: 10), // large file downloads
+            receiveTimeout: const Duration(minutes: 10),
             sendTimeout: const Duration(minutes: 5),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'X-API-Key': apiKey,
+              'Accept': 'application/json',
+            },
           ),
-        ) {
-    _dio.interceptors.addAll([
-      _LoggingInterceptor(),
-      _ErrorInterceptor(),
-    ]);
-  }
+        );
 
+  final String baseUrl;
+  final String apiKey;
   final Dio _dio;
 
-  Dio get dio => _dio;
+  // ── Profiles ─────────────────────────────────────────────────────────────
 
-  // ── Jobs ──────────────────────────────────────────────────────────────────
-
-  /// Submit a new job. [pdf] path + [samples] paths → job_id.
-  Future<Map<String, dynamic>> createJob({
-    required String pdfPath,
+  /// POST /profiles — upload sample images and create a profile.
+  ///
+  /// [name] is the writer name. [samplePaths] are absolute file paths to
+  /// 15–30 handwriting sample images. [onProgress] reports upload progress
+  /// as a fraction 0.0–1.0.
+  Future<Profile> createProfile({
+    required String name,
     required List<String> samplePaths,
+    void Function(double progress)? onProgress,
   }) async {
-    final formData = FormData();
-    formData.files.add(
-      MapEntry('pdf', await MultipartFile.fromFile(pdfPath, filename: 'input.pdf')),
-    );
-    for (final p in samplePaths) {
-      formData.files.add(
-        MapEntry(
-          'samples',
-          await MultipartFile.fromFile(p, filename: p.split('/').last),
-        ),
-      );
+    final form = FormData();
+    form.fields.add(MapEntry('name', name));
+    for (final path in samplePaths) {
+      form.files.add(MapEntry(
+        'images',
+        await MultipartFile.fromFile(path, filename: path.split('/').last),
+      ));
     }
-    final response = await _dio.post<Map<String, dynamic>>('/jobs', data: formData);
-    return response.data!;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/profiles',
+        data: form,
+        onSendProgress: (sent, total) {
+          if (total > 0 && onProgress != null) {
+            onProgress(sent / total);
+          }
+        },
+      );
+      return Profile.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
   }
 
-  /// Poll job status.
-  Future<Map<String, dynamic>> getJobStatus(String jobId) async {
-    final response = await _dio.get<Map<String, dynamic>>('/jobs/$jobId');
-    return response.data!;
+  /// POST /profiles/{id}/train — start fine-tuning.
+  Future<void> startTraining(String profileId) async {
+    try {
+      await _dio.post('/profiles/$profileId/train');
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
   }
 
-  /// Stream-download the finished PDF, saving to [savePath].
+  /// GET /profiles/{id} — poll training status.
+  Future<Profile> getProfile(String profileId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>('/profiles/$profileId');
+      return Profile.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  // ── Convert / Jobs ──────────────────────────────────────────────────────────
+
+  /// POST /convert — submit a conversion job.
+  ///
+  /// [profileId] must reference a READY profile. [pdfPath] is the absolute
+  /// path to the source PDF. [onProgress] reports upload progress.
+  /// [paperStyle], [inkColor], [jitter] are optional render preferences
+  /// sent as extra form fields (backend ignores unknown fields gracefully).
+  Future<Job> convert({
+    required String profileId,
+    required String pdfPath,
+    String? paperStyle,
+    String? inkColor,
+    double? jitter,
+    void Function(double progress)? onProgress,
+  }) async {
+    final form = FormData();
+    form.fields.add(MapEntry('profile_id', profileId));
+    if (paperStyle != null) form.fields.add(MapEntry('paper_style', paperStyle));
+    if (inkColor != null) form.fields.add(MapEntry('ink_color', inkColor));
+    if (jitter != null) form.fields.add(MapEntry('jitter', jitter.toString()));
+    form.files.add(MapEntry(
+      'pdf',
+      await MultipartFile.fromFile(pdfPath, filename: pdfPath.split('/').last),
+    ));
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/convert',
+        data: form,
+        onSendProgress: (sent, total) {
+          if (total > 0 && onProgress != null) {
+            onProgress(sent / total);
+          }
+        },
+      );
+      return Job.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  /// GET /jobs/{id} — poll job status.
+  Future<Job> getJob(String jobId) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>('/jobs/$jobId');
+      return Job.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
+  }
+
+  /// GET /download/{id} — download the finished PDF to [savePath].
+  ///
+  /// [onProgress] reports download progress as a fraction 0.0–1.0.
   Future<void> downloadResult({
     required String jobId,
-    required String token,
     required String savePath,
-    void Function(int received, int total)? onProgress,
+    void Function(double progress)? onProgress,
   }) async {
-    await _dio.download(
-      '/jobs/$jobId/download',
-      savePath,
-      queryParameters: {'token': token},
-      onReceiveProgress: onProgress,
-    );
-  }
-}
-
-// ── Interceptors ─────────────────────────────────────────────────────────────
-
-class _LoggingInterceptor extends Interceptor {
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // ignore: avoid_print
-    print('[API] → ${options.method} ${options.path}');
-    handler.next(options);
+    try {
+      await _dio.download(
+        '/download/$jobId',
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total > 0 && onProgress != null) {
+            onProgress(received / total);
+          }
+        },
+      );
+    } on DioException catch (e) {
+      throw _wrap(e);
+    }
   }
 
-  @override
-  void onResponse(Response response, ResponseInterceptorHandler handler) {
-    // ignore: avoid_print
-    print('[API] ← ${response.statusCode} ${response.requestOptions.path}');
-    handler.next(response);
+  // ── Health ──────────────────────────────────────────────────────────────────
+
+  /// GET /health — liveness check (no API key required).
+  Future<bool> healthCheck() async {
+    try {
+      // Temporarily remove the API key header for health
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/health',
+        options: Options(headers: {'X-API-Key': null}),
+      );
+      return response.data?['status'] == 'ok';
+    } on DioException {
+      return false;
+    }
   }
 
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    // ignore: avoid_print
-    print('[API] ✗ ${err.type} ${err.requestOptions.path}');
-    handler.next(err);
-  }
-}
+  // ── Internal ──────────────────────────────────────────────────────────────────
 
-class _ErrorInterceptor extends Interceptor {
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    // Translate Dio errors into our own domain type
-    handler.reject(
-      DioException(
-        requestOptions: err.requestOptions,
-        error: ApiException.fromDioException(err),
-        type: err.type,
-        response: err.response,
-      ),
-    );
-  }
+  ApiException _wrap(DioException e) => ApiException.fromDioException(e);
 }

@@ -37,7 +37,7 @@ _scheduler = BackgroundScheduler()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # ── Startup ───────────────────────────────────────────────────────────────
-    configure_logging()
+    configure_logging(level=settings.log_level, fmt=settings.log_format)
     init_db()
 
     _scheduler.add_job(

@@ -1,0 +1,32 @@
+# ── Exclude files not needed in the Docker image ───────────────────────────────
+.git
+.gitignore
+.env
+.env.example
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.mypy_cache
+htmlcov
+.coverage
+
+# Data directories (mounted as volumes in production)
+data/
+checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Docker
+Dockerfile
+Dockerfile.prod
+docker-compose*.yml
+
+# Tests (not needed in the runtime image)
+tests/

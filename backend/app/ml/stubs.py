@@ -70,7 +70,9 @@ def render_pdf(
 ) -> None:
     """Render *input_pdf_path* in the writer's style and save to *output_pdf_path*.
 
-    Replace this stub with real inference code.
+    Delegates to :func:`app.ml.render.render_pdf`.  If no trained checkpoint
+    is available at *checkpoint_path*, a synthetic handwriting renderer is
+    used as a fallback so the pipeline still produces output.
 
     Parameters
     ----------
@@ -86,10 +88,9 @@ def render_pdf(
 
     Raises
     ------
-    NotImplementedError
-        Always — until a real implementation replaces this stub.
+    FileNotFoundError
+        If *input_pdf_path* does not exist.
     """
-    raise NotImplementedError(
-        "render_pdf() is a stub. "
-        "Plug in your real PDF rendering code."
-    )
+    from app.ml.render import render_pdf as _do_render
+
+    _do_render(input_pdf_path, checkpoint_path, output_pdf_path, progress_cb)

@@ -1,0 +1,90 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Handprint AI — Production GPU deployment
+# ═══════════════════════════════════════════════════════════════════════════════
+# Usage:
+#   1. cp .env.example .env          # fill in API_KEY and other secrets
+#   2. ./backend/nginx/generate-cert.sh ./certs   # create self-signed certs
+#   3. docker compose -f docker-compose.prod.yml up --build -d
+#
+# Prerequisites:
+#   - NVIDIA Container Toolkit (nvidia-container-toolkit) installed on the host
+#   - Docker Compose v2.20+ (for GPU support in compose)
+#   - Model checkpoint files placed in ./checkpoints/
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── FastAPI backend (GPU) ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Point all storage to mounted volumes
+      DATABASE_URL: sqlite:////mnt/data/db/handprint.db
+      UPLOAD_DIR: /mnt/data/uploads
+      SAMPLE_DIR: /mnt/data/samples
+      OUTPUT_DIR: /mnt/data/outputs
+      LOG_FORMAT: json
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - handprint-data:/mnt/data
+      - handprint-checkpoints:/mnt/checkpoints
+    healthcheck:
+      test: ["CMD", "/app/scripts/healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # No external ports — nginx is the only entry point
+    expose:
+      - "8000"
+    networks:
+      - handprint-net
+
+  # ── nginx reverse proxy (TLS + rate limiting) ────────────────────────────────
+  nginx:
+    build:
+      context: ./backend/nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - handprint-net
+
+# ── Named volumes ─────────────────────────────────────────────────────────────
+volumes:
+  handprint-data:
+    driver: local
+  handprint-checkpoints:
+    driver: local
+    # Mount a host directory for model weights so they persist across rebuilds:
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/to/your/checkpoints
+
+# ── Network ───────────────────────────────────────────────────────────────────
+networks:
+  handprint-net:
+    driver: bridge

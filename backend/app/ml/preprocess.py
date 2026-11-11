@@ -7,8 +7,9 @@ Pipeline stages
 ---------------
 1.  **Rasterise**  PDF → 300 DPI greyscale page images (via PyMuPDF).
                    Plain images (JPG/PNG/TIFF) are accepted directly.
-2.  **Deskew**     Rotate each page to horizontal using Hough-line analysis
-                   (scipy peak_local_max on the projection profile).
+2.  **Deskew**     Rotate each page to horizontal by maximising the variance
+                   of the horizontal projection profile across candidate
+                   angles (scipy.ndimage.rotate for the search).
 3.  **Normalise**  CLAHE contrast enhancement + Otsu binarisation on a
                    per-block basis so varying ink density doesn't matter.
 4.  **Segment**    Two-stage: horizontal projection → text lines, then
@@ -54,15 +55,14 @@ import sys
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator, NamedTuple
+from typing import NamedTuple
 
 import cv2
 import fitz  # pymupdf
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from rapidfuzz import fuzz, process as rfuzz_process
+from rapidfuzz import fuzz
 from scipy.ndimage import rotate as scipy_rotate
-from skimage import exposure
 
 logger = logging.getLogger(__name__)
 

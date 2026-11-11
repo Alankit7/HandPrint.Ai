@@ -1,4 +1,4 @@
-/// Domain-level API exception surfaced to the UI layer.
+/// Typed API exceptions surfaced to the UI layer.
 library;
 
 import 'package:dio/dio.dart';
@@ -30,19 +30,23 @@ class ApiException implements Exception {
       DioExceptionType.receiveTimeout =>
         const ApiException(message: 'Request timed out. Please try again.'),
       DioExceptionType.connectionError =>
-        const ApiException(message: 'Could not reach the server. Check your connection.'),
+        const ApiException(
+            message: 'Could not reach the server. Check your connection and base URL.'),
+      DioExceptionType.cancel =>
+        const ApiException(message: 'Request was cancelled.'),
       _ => ApiException(message: e.message ?? 'An unexpected error occurred.'),
     };
   }
 
   static String _messageForStatus(int? code) => switch (code) {
         400 => 'Bad request.',
+        401 => 'API key is missing or invalid.',
+        403 => 'Invalid API key.',
+        404 => 'Resource not found.',
+        409 => 'Conflict — the resource is in the wrong state for this action.',
         413 => 'File is too large.',
         415 => 'Unsupported file type.',
         422 => 'Validation error.',
-        403 => 'Invalid or expired download link.',
-        404 => 'Job not found.',
-        409 => 'Job is not ready yet.',
         500 => 'Server error. Please try again later.',
         _ => 'Request failed (HTTP $code).',
       };

@@ -20,10 +20,10 @@ pymupdf==1.24.1
 # ── Preprocessing pipeline ────────────────────────────────────────────────────
 numpy==1.26.4
 opencv-python-headless==4.9.0.80   # line/word segmentation; headless = no GUI deps
-scipy==1.13.0                       # deskew (Hough), morphological ops
-scikit-image==0.23.2                # CLAHE contrast normalisation, label regions
+scipy==1.13.0                       # deskew (projection variance), morphological ops
 rapidfuzz==3.9.3                    # fast fuzzy string alignment (Levenshtein)
 reportlab==4.1.0                    # debug preview-grid PDF output
+img2pdf==0.5.1                      # lossless image-to-PDF assembly for render output
 
 # ── Kraken (optional — soft dependency) ───────────────────────────────────────
 # Install manually when you want the Kraken fallback segmenter:

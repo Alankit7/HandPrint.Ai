@@ -1,76 +1,104 @@
-/// go_router configuration — all named routes in one place.
+/// go_router configuration with a bottom-nav shell and a push route for results.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/processing/processing_screen.dart';
+import '../../features/convert/convert_screen.dart';
+import '../../features/history/history_screen.dart';
+import '../../features/profiles/profiles_screen.dart';
 import '../../features/result/result_screen.dart';
-import '../../features/upload/upload_screen.dart';
-
-// Named route constants (use these instead of raw strings)
-abstract class AppRoutes {
-  static const upload = '/';
-  static const processing = '/processing/:jobId';
-  static const result = '/result/:jobId/:token';
-}
+import '../../features/settings/settings_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: AppRoutes.upload,
-    debugLogDiagnostics: false,
-    errorBuilder: (context, state) => _ErrorScreen(error: state.error),
+    initialLocation: '/profiles',
     routes: [
-      GoRoute(
-        path: AppRoutes.upload,
-        name: 'upload',
-        builder: (context, state) => const UploadScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.processing,
-        name: 'processing',
-        builder: (context, state) {
-          final jobId = state.pathParameters['jobId']!;
-          return ProcessingScreen(jobId: jobId);
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return _ScaffoldWithNav(navigationShell: navigationShell);
         },
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/profiles',
+              name: 'profiles',
+              builder: (context, state) => const ProfilesScreen(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/convert',
+              name: 'convert',
+              builder: (context, state) => const ConvertScreen(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/history',
+              name: 'history',
+              builder: (context, state) => const HistoryScreen(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/settings',
+              name: 'settings',
+              builder: (context, state) => const SettingsScreen(),
+            ),
+          ]),
+        ],
       ),
       GoRoute(
-        path: AppRoutes.result,
+        path: '/result/:jobId',
         name: 'result',
-        builder: (context, state) {
-          final jobId = state.pathParameters['jobId']!;
-          final token = Uri.decodeComponent(state.pathParameters['token']!);
-          return ResultScreen(jobId: jobId, downloadToken: token);
-        },
+        builder: (context, state) =>
+            ResultScreen(jobId: state.pathParameters['jobId']!),
       ),
     ],
   );
 });
 
-class _ErrorScreen extends StatelessWidget {
-  const _ErrorScreen({this.error});
+class _ScaffoldWithNav extends StatelessWidget {
+  const _ScaffoldWithNav({required this.navigationShell});
 
-  final Exception? error;
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Page not found')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64),
-            const SizedBox(height: 16),
-            Text(error?.toString() ?? 'Unknown route'),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () => context.go('/'),
-              child: const Text('Go home'),
-            ),
-          ],
-        ),
+      body: navigationShell,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: (index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profiles',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outline),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'Convert',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history),
+            selectedIcon: Icon(Icons.history_outlined),
+            label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }
