@@ -1,0 +1,40 @@
+# ── Web framework ─────────────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+aiofiles==23.2.1
+
+# ── Config ────────────────────────────────────────────────────────────────────
+pydantic==2.7.1
+pydantic-settings==2.2.1
+python-dotenv==1.0.1
+
+# ── Database ──────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.30
+alembic==1.13.1
+
+# ── PDF / image helpers ───────────────────────────────────────────────────────
+Pillow==10.3.0
+pymupdf==1.24.1
+
+# ── Preprocessing pipeline ────────────────────────────────────────────────────
+numpy==1.26.4
+opencv-python-headless==4.9.0.80   # line/word segmentation; headless = no GUI deps
+scipy==1.13.0                       # deskew (Hough), morphological ops
+scikit-image==0.23.2                # CLAHE contrast normalisation, label regions
+rapidfuzz==3.9.3                    # fast fuzzy string alignment (Levenshtein)
+reportlab==4.1.0                    # debug preview-grid PDF output
+
+# ── Kraken (optional — soft dependency) ───────────────────────────────────────
+# Install manually when you want the Kraken fallback segmenter:
+#   pip install kraken==4.3.13
+# The pipeline imports it lazily; if absent it silently falls back to OpenCV only.
+
+# ── Scheduling / APScheduler for cleanup task ─────────────────────────────────
+apscheduler==3.10.4
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest==8.2.0
+pytest-asyncio==0.23.6
+httpx==0.27.0
+pytest-mock==3.14.0

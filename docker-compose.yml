@@ -1,0 +1,60 @@
+version: "3.9"
+
+# ── Handprint AI – docker-compose ─────────────────────────────────────────────
+# Usage:
+#   cp .env.example .env          # fill in your values
+#   docker compose up --build
+#
+# GPU passthrough requires the NVIDIA Container Toolkit installed on the host.
+
+services:
+  # ── Redis (job queue) ────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      QUEUE_BACKEND: redis
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/checkpoints:/app/checkpoints
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # ── Flutter web (optional, production build served by nginx) ─────────────────
+  flutter_web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      API_BASE_URL: "http://backend:8000"
+    depends_on:
+      - backend

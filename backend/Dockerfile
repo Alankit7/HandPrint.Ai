@@ -1,0 +1,22 @@
+# ── Handprint AI — backend Dockerfile ────────────────────────────────────────
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps for pymupdf / Pillow
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libglib2.0-0 libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Runtime directories (override with Docker volumes in production)
+RUN mkdir -p data/uploads data/samples data/outputs data/db
+
+EXPOSE 8000
+
+# Run database migrations then start the server
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]

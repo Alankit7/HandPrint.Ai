@@ -1,0 +1,43 @@
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+*.pem
+*.key
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# ── Backend data ──────────────────────────────────────────────────────────────
+backend/data/uploads/
+backend/data/outputs/
+backend/checkpoints/
+
+# ── Flutter ───────────────────────────────────────────────────────────────────
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.packages
+app/pubspec.lock        # keep if you want reproducible builds; remove to ignore
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+*.log
