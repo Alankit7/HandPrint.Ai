@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ── Handprint AI — local development ──────────────────────────────────────────
 # Usage:
 #   cp .env.example .env     # fill in API_KEY

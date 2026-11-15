@@ -17,14 +17,6 @@ import '../models/job.dart';
 import '../models/profile.dart';
 import 'api_exception.dart';
 
-/// Provider so the client is a singleton shared across the app.
-/// Re-created when settings (base URL / API key) change.
-final apiClientProvider = Provider<ApiClient>((ref) {
-  // The SettingsProvider overrides this with the user's configured values.
-  // This default constructor reads from .env defaults.
-  throw UnimplementedError('apiClientProvider must be overridden in ProviderScope');
-});
-
 /// A factory provider that accepts base URL and API key.
 final apiClientFactoryProvider =
     Provider.family<ApiClient, ({String baseUrl, String apiKey})>(

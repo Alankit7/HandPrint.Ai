@@ -27,6 +27,7 @@ def run_training(profile_id: str) -> None:
     logger.info("[train] Starting training for profile %s", profile_id)
 
     # ── 1. Mark TRAINING ──────────────────────────────────────────────────────
+    sample_dir_str: str | None = None
     with get_db_ctx() as db:
         profile: Profile | None = db.get(Profile, profile_id)
         if profile is None:
@@ -35,12 +36,13 @@ def run_training(profile_id: str) -> None:
         profile.status = ProfileStatus.TRAINING
         profile.train_progress = 0.0
         profile.error = None
+        sample_dir_str = profile.sample_dir  # read while session is open
 
     # ── 2. Prepare checkpoint output directory ────────────────────────────────
     checkpoint_out = settings.output_dir / "checkpoints" / profile_id
     checkpoint_out.mkdir(parents=True, exist_ok=True)
 
-    sample_dir = Path(profile.sample_dir) if profile.sample_dir else None
+    sample_dir = Path(sample_dir_str) if sample_dir_str else None
     if sample_dir is None or not sample_dir.exists():
         _fail(profile_id, "Sample directory missing or inaccessible.")
         return

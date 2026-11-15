@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt requirements/base.txt ./requirements/
+COPY requirements/base.txt ./requirements/
 # Install from the base (runtime-only) requirements — test deps are excluded
 RUN python -m venv /opt/venv \
     && . /opt/venv/bin/activate \

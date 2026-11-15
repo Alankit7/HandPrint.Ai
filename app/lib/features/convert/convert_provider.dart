@@ -9,6 +9,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
@@ -158,6 +159,10 @@ class ConvertNotifier extends StateNotifier<ConvertState> {
     _pollTimer?.cancel();
     super.dispose();
   }
+
+  /// For tests only — directly seeds state without going through submit().
+  @visibleForTesting
+  void seedState(ConvertState s) => state = s;
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

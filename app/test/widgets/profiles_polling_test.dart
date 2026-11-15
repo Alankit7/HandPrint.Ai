@@ -55,10 +55,10 @@ void main() {
     test('updates profile status to training with progress', () async {
       // Seed a profile in the list
       final initial = _makeProfile(status: ProfileStatus.pending);
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         profiles: [initial],
         trainingProfileId: 'profile-1',
-      );
+      ));
 
       final training = _makeProfile(status: ProfileStatus.training, trainProgress: 0.4);
       when(() => mockApi.getProfile('profile-1')).thenAnswer((_) async => training);
@@ -73,10 +73,10 @@ void main() {
     });
 
     test('stops polling when profile reaches ready', () async {
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         profiles: [_makeProfile(status: ProfileStatus.training, trainProgress: 0.8)],
         trainingProfileId: 'profile-1',
-      );
+      ));
 
       final ready = _makeProfile(status: ProfileStatus.ready, trainProgress: 1.0);
       when(() => mockApi.getProfile('profile-1')).thenAnswer((_) async => ready);
@@ -90,10 +90,10 @@ void main() {
     });
 
     test('stops polling when profile reaches failed', () async {
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         profiles: [_makeProfile(status: ProfileStatus.training)],
         trainingProfileId: 'profile-1',
-      );
+      ));
 
       final failed = _makeProfile(status: ProfileStatus.failed, error: 'OOM');
       when(() => mockApi.getProfile('profile-1')).thenAnswer((_) async => failed);
@@ -106,10 +106,10 @@ void main() {
     });
 
     test('handles API error silently without crashing', () async {
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         profiles: [_makeProfile(status: ProfileStatus.training)],
         trainingProfileId: 'profile-1',
-      );
+      ));
 
       when(() => mockApi.getProfile('profile-1')).thenThrow(Exception('Network error'));
 
@@ -124,10 +124,10 @@ void main() {
     test('updates profile in list without affecting other profiles', () async {
       final p1 = _makeProfile(id: 'profile-1', name: 'Alice', status: ProfileStatus.training);
       final p2 = _makeProfile(id: 'profile-2', name: 'Bob', status: ProfileStatus.ready);
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         profiles: [p1, p2],
         trainingProfileId: 'profile-1',
-      );
+      ));
 
       final updated = _makeProfile(id: 'profile-1', name: 'Alice', status: ProfileStatus.ready, trainProgress: 1.0);
       when(() => mockApi.getProfile('profile-1')).thenAnswer((_) async => updated);
@@ -142,10 +142,10 @@ void main() {
     });
 
     test('transitions through training to ready', () async {
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         profiles: [_makeProfile(status: ProfileStatus.pending)],
         trainingProfileId: 'profile-1',
-      );
+      ));
 
       // Training
       when(() => mockApi.getProfile('profile-1'))
@@ -187,7 +187,7 @@ void main() {
 
   group('stopTrainingPoll()', () {
     test('clears trainingProfileId', () {
-      notifier.state = notifier.state.copyWith(trainingProfileId: 'profile-1');
+      notifier.seedState(notifier.state.copyWith(trainingProfileId: 'profile-1'));
       notifier.stopTrainingPoll();
       expect(notifier.state.trainingProfileId, isNull);
     });
@@ -253,10 +253,10 @@ void main() {
 
   group('ProfilesState helpers', () {
     test('clearErrors removes error and uploadError', () {
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         error: 'some error',
         uploadError: 'upload error',
-      );
+      ));
       notifier.clearErrors();
       expect(notifier.state.error, isNull);
       expect(notifier.state.uploadError, isNull);

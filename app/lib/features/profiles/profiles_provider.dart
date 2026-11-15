@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
@@ -161,6 +162,10 @@ class ProfilesNotifier extends StateNotifier<ProfilesState> {
   void clearErrors() {
     state = state.copyWith(clearError: true, clearUploadError: true);
   }
+
+  /// For tests only — directly seeds state without going through the API.
+  @visibleForTesting
+  void seedState(ProfilesState s) => state = s;
 
   @override
   void dispose() {

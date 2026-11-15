@@ -84,8 +84,8 @@ class _ScaffoldWithNav extends StatelessWidget {
             label: 'Profiles',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outline),
-            selectedIcon: Icon(Icons.auto_awesome),
+            icon: Icon(Icons.auto_fix_normal_outlined),
+            selectedIcon: Icon(Icons.auto_fix_high),
             label: 'Convert',
           ),
           NavigationDestination(

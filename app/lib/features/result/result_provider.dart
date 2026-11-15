@@ -1,13 +1,12 @@
 /// Result provider — downloads the finished PDF and manages the local file.
 library;
 
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/network/api_client.dart';
+import '../history/history_provider.dart';
 import '../settings/settings_provider.dart';
 
 class ResultState {
@@ -42,9 +41,10 @@ class ResultState {
 }
 
 class ResultNotifier extends StateNotifier<ResultState> {
-  ResultNotifier(this._api) : super(const ResultState());
+  ResultNotifier(this._api, this._ref) : super(const ResultState());
 
   final ApiClient _api;
+  final Ref _ref;
 
   /// Download the finished PDF for [jobId] to the app's documents directory.
   Future<String?> download(String jobId) async {
@@ -63,9 +63,8 @@ class ResultNotifier extends StateNotifier<ResultState> {
       await _api.downloadResult(
         jobId: jobId,
         savePath: savePath,
-        onProgress: (received, total) {
-          // onProgress gives us a double 0.0–1.0
-          state = state.copyWith(downloadProgress: received);
+        onProgress: (progress) {
+          state = state.copyWith(downloadProgress: progress);
         },
       );
 
@@ -74,6 +73,16 @@ class ResultNotifier extends StateNotifier<ResultState> {
         downloadProgress: 1.0,
         localPath: savePath,
       );
+
+      // Record in history so the History tab shows completed conversions.
+      await _ref.read(historyProvider.notifier).add(HistoryEntry(
+        jobId: jobId,
+        profileName: '',
+        completedAt: DateTime.now(),
+        localPath: savePath,
+        pdfFileName: 'handprint_$jobId.pdf',
+      ));
+
       return savePath;
     } catch (e) {
       state = state.copyWith(
@@ -106,6 +115,6 @@ final resultProvider =
     StateNotifierProvider.autoDispose.family<ResultNotifier, ResultState, String>(
   (ref, jobId) {
     final api = ref.watch(settingsApiClientProvider);
-    return ResultNotifier(api);
+    return ResultNotifier(api, ref);
   },
 );

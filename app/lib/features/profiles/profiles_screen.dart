@@ -11,7 +11,6 @@ import '../../core/models/profile.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/error_state.dart';
 import '../../shared/widgets/inline_error_card.dart';
-import '../../shared/widgets/loading_indicator.dart';
 import 'profiles_provider.dart';
 
 class ProfilesScreen extends ConsumerWidget {
@@ -36,6 +35,9 @@ class ProfilesScreen extends ConsumerWidget {
     if (state.isUploading) {
       return _UploadProgress(state: state);
     }
+    if (state.error != null && state.profiles.isEmpty) {
+      return ErrorState(message: state.error!, onRetry: () => ref.read(profilesProvider.notifier).clearErrors());
+    }
     if (state.profiles.isEmpty) {
       return EmptyState(
         icon: Icons.person_outline,
@@ -44,9 +46,6 @@ class ProfilesScreen extends ConsumerWidget {
         actionLabel: 'New Profile',
         onAction: () => _showCreateSheet(context, ref),
       );
-    }
-    if (state.error != null && state.profiles.isEmpty) {
-      return ErrorState(message: state.error!, onRetry: () => ref.read(profilesProvider.notifier).clearErrors());
     }
     return ListView.builder(
       padding: const EdgeInsets.all(16),

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
 import '../../core/models/profile.dart';
+import '../../core/models/job.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/inline_error_card.dart';
 import '../profiles/profiles_provider.dart';
@@ -48,7 +49,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
       appBar: AppBar(title: const Text('Convert')),
       body: convertState.isBusy
           ? _ProgressView(state: convertState)
-          : _buildForm(context, readyProfiles, profilesState),
+          : _buildForm(context, readyProfiles, profilesState, convertState),
     );
   }
 
@@ -56,6 +57,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
     BuildContext context,
     List<Profile> readyProfiles,
     ProfilesState profilesState,
+    ConvertState convertState,
   ) {
     if (readyProfiles.isEmpty) {
       return const EmptyState(
@@ -178,7 +180,7 @@ class _ConvertScreenState extends ConsumerState<ConvertScreen> {
   Future<void> _submit() async {
     if (!_canSubmit()) return;
     // Convert ink color to "r,g,b" string
-    final inkStr = '${_inkColor.red},${_inkColor.green},${_inkColor.blue}';
+    final inkStr = '${(_inkColor.r * 255).round()},${(_inkColor.g * 255).round()},${(_inkColor.b * 255).round()}';
     await ref.read(convertProvider.notifier).submit(
           profileId: _selectedProfileId!,
           pdfPath: _pdfPath!,

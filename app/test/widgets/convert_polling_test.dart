@@ -185,11 +185,11 @@ void main() {
   group('reset()', () {
     test('clears all state', () {
       // Manually set some state
-      notifier.state = notifier.state.copyWith(
+      notifier.seedState(notifier.state.copyWith(
         jobId: 'job-1',
         job: _makeJob(),
         uploadProgress: 0.5,
-      );
+      ));
 
       notifier.reset();
 
